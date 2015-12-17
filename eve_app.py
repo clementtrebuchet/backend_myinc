@@ -1,6 +1,6 @@
 # coding: utf8
 """
-Airbus - SOC - Dept.
+
 @Todo define use case
 
 """
@@ -9,11 +9,9 @@ from functools import update_wrapper
 
 from eve import Eve
 from eve.auth import BasicAuth
-from werkzeug.security import check_password_hash
 from flask import request, current_app, make_response
 from redis import StrictRedis
 from flask.ext.sentinel import ResourceOwnerPasswordCredentials, oauth
-
 
 __author__ = 'clement'
 
@@ -22,6 +20,7 @@ class BearerAuth(BasicAuth):
     """ Overrides Eve's built-in basic authorization scheme and uses Redis to
     validate bearer token
     """
+
     def __init__(self):
         super(BearerAuth, self).__init__()
         self.redis = StrictRedis()
@@ -53,34 +52,18 @@ class BearerAuth(BasicAuth):
         return self.check_auth(token, allowed_roles, resource, method)
 
 
-class Sha1Auth(BasicAuth):
-    def check_auth(self, username, password, allowed_roles, resource, method):
-        # use Eve's own db driver; no additional connections/resources are used
-        accounts = app.data.driver.db['users']
-        account = accounts.find_one({'login': username})
-        print(account)
-        return account and \
-            check_password_hash(account['hash'], password)
-
-
 def before_returning_peoples(resource_name, response):
-    #pass
     print('About to return items from "%s" ' % resource_name)
-    # print(response)
 
 
-def before_returning_multipoints(resource_name, response):
-    #pass
-    print('About to return items from "%s" ' % resource_name)
-    # print(response)
 app = Eve(auth=BearerAuth)
 ResourceOwnerPasswordCredentials(app)
 app.config.from_object('settings')
 
 
-def crossdomain(origin=None, methods=None, headers=None,
-                max_age=21600, attach_to_all=True,
-                automatic_options=True):
+def cross_domain(origin=None, methods=None, headers=None,
+                 max_age=21600, attach_to_all=True,
+                 automatic_options=True):
     if methods is not None:
         methods = ', '.join(sorted(x.upper() for x in methods))
     if headers is not None and not isinstance(headers, basestring):
@@ -117,7 +100,9 @@ def crossdomain(origin=None, methods=None, headers=None,
 
         f.provide_automatic_options = False
         return update_wrapper(wrapped_function, f)
+
     return decorator
+
 
 @app.after_request
 def after(response):
@@ -126,8 +111,9 @@ def after(response):
         response.headers['Access-Control-Allow-Headers'] = 'Authorization'
     return response
 
+
 @app.route('/endpoint')
-@crossdomain(origin='*')
+@cross_domain(origin='*')
 @oauth.require_oauth()
 def restricted_access():
     return "You made it through and accessed the protected resource!"
