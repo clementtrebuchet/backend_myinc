@@ -2,3 +2,4 @@ mongo_instance
 static
 .idea
 backup_myinc_mongodb_log.log
+.DS_Store

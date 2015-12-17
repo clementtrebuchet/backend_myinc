@@ -11,14 +11,16 @@ from eve import Eve
 from flask import request
 from flask.ext.cors import cross_origin
 from flask.ext.sentinel import ResourceOwnerPasswordCredentials, oauth
+from redis import ConnectionError
 
 from security.bearer_auth import BoAuth
+
 
 __author__ = 'clement'
 
 app = Eve(auth=BoAuth)
 ResourceOwnerPasswordCredentials(app)
-app.config.from_object('settings')
+
 
 
 def before_returning_peoples(resource_name, response):
@@ -52,9 +54,12 @@ def after(response):
     :param response:
     :return: add headers to http response
     """
-    if request.headers['Origin']:
-        response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
-        response.headers['Access-Control-Allow-Headers'] = 'Authorization'
+    try:
+        if request.headers['Origin']:
+            response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            response.headers['Access-Control-Allow-Headers'] = 'Authorization'
+    except KeyError as error:
+        print('{}'.format(error))
     return response
 
 

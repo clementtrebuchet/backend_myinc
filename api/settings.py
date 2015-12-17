@@ -3,11 +3,11 @@
 Eve settings files
 
 """
-
 from models.peoples import peoples
 from models.works import works
 
 __author__ = 'clement'
+
 SENTINEL_MONGO_HOST = 'localhost'
 SENTINEL_MONGO_PORT = 27017
 # MONGO_USERNAME = 'user'
@@ -33,5 +33,7 @@ PUBLIC_METHODS = ['GET']
 PUBLIC_ITEM_METHODS = ['GET']
 JSON = True
 
-DOMAIN = {'peoples': peoples,
-          'works': works}
+DOMAIN = {
+    'peoples': peoples(),
+    'works': works()
+}
