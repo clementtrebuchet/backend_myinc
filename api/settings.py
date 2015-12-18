@@ -32,7 +32,23 @@ X_ALLOW_CREDENTIALS = True
 PUBLIC_METHODS = ['GET']
 PUBLIC_ITEM_METHODS = ['GET']
 JSON = True
-
+SWAGGER = {
+    'info': {
+        'title': 'ITCT Open Consulting API',
+        'version': '1.0',
+        'description': 'Presentation API',
+        'termsOfService': 'public use',
+        'contact': {
+            'name': 'clement',
+            'email': 'clement.trebuchet@gmail.com'
+        },
+        'license': {
+            'name': 'BSD',
+            'url': 'http://dockerapp.clementtrebuchet.cloudns.pw/',
+        }
+    },
+    'host': 'http://dockerapp.clementtrebuchet.cloudns.pw/'
+}
 DOMAIN = {
     'peoples': peoples(),
     'works': works()

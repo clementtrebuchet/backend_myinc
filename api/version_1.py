@@ -11,7 +11,7 @@ from eve import Eve
 from flask import request
 from flask.ext.cors import cross_origin
 from flask.ext.sentinel import ResourceOwnerPasswordCredentials, oauth
-from redis import ConnectionError
+from eve_swagger import swagger
 
 from security.bearer_auth import BoAuth
 
@@ -20,6 +20,7 @@ __author__ = 'clement'
 
 app = Eve(auth=BoAuth)
 ResourceOwnerPasswordCredentials(app)
+app.register_blueprint(swagger)
 
 
 
