@@ -6,3 +6,4 @@ backup_myinc_mongodb_log.log.*
 *.pyc
 eve-swagger
 doc
+python-client

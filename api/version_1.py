@@ -48,6 +48,33 @@ def post_get_callback(resource, request, payload):
     pass
 
 
+def pre_get_promotion(resource, request, payload):
+    """
+
+    :param resource:
+    :param request:
+    :param payload:
+    :return:
+    """
+    print('General pre_get_promotion {}\nRequest Headers: {}'
+          '\nPayload: {}'.format(resource, request.headers, str(payload)))
+    pass
+
+
+def pre_post_peoples(resource, LocalProxy):
+    """
+
+    :param resource:
+    :param request:
+    :param payload:
+    :return:
+    """
+    print('General pre_post_peoples')
+    print(resource)
+    print(LocalProxy.data)
+
+
+
 @app.after_request
 def after(response):
     """
@@ -58,7 +85,7 @@ def after(response):
     try:
         if request.headers['Origin']:
             response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
-            response.headers['Access-Control-Allow-Headers'] = 'Authorization'
+            response.headers['Access-Control-Allow-Methods'] = "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     except KeyError as error:
         print('{}'.format(error))
     return response
@@ -81,4 +108,6 @@ def heart_beat():
 if __name__ == '__main__':
     app.on_fetched_resource += before_returning_peoples
     app.on_post_GET += post_get_callback
-    app.run(debug=True)
+    app.on_pre_GET += pre_get_promotion
+    app.on_pre_POST += pre_post_peoples
+    app.run(debug=True, host='192.168.0.2')

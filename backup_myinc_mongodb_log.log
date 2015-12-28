@@ -1,0 +1,26 @@
+Thu Dec 17 23:49:03.260 [initandlisten] MongoDB starting : pid=20151 port=27017 dbpath=/home/clement/Projects/Pyhton/backend_myinc/mongo_instance/ 32-bit host=clemopower.teamat4cs
+Thu Dec 17 23:49:03.260 [initandlisten] 
+Thu Dec 17 23:49:03.260 [initandlisten] ** NOTE: This is a 32 bit MongoDB binary.
+Thu Dec 17 23:49:03.260 [initandlisten] **       32 bit builds are limited to less than 2GB of data (or less with --journal).
+Thu Dec 17 23:49:03.260 [initandlisten] **       Note that journaling defaults to off for 32 bit and is currently off.
+Thu Dec 17 23:49:03.260 [initandlisten] **       See http://dochub.mongodb.org/core/32bit
+Thu Dec 17 23:49:03.260 [initandlisten] 
+Thu Dec 17 23:49:03.260 [initandlisten] db version v2.4.14
+Thu Dec 17 23:49:03.260 [initandlisten] git version: 05bebf9ab15511a71bfbded684bb226014c0a553
+Thu Dec 17 23:49:03.260 [initandlisten] build info: Linux ip-10-144-100-100 2.6.21.7-2.fc8xen #1 SMP Fri Feb 15 12:39:36 EST 2008 i686 BOOST_LIB_VERSION=1_49
+Thu Dec 17 23:49:03.260 [initandlisten] allocator: system
+Thu Dec 17 23:49:03.260 [initandlisten] options: { dbpath: "mongo_instance/", fork: true, logpath: "backup_myinc_mongodb_log.log", rest: true }
+Thu Dec 17 23:49:03.822 [websvr] ERROR: listen(): bind() failed errno:98 Address already in use for socket: 0.0.0.0:28017
+Thu Dec 17 23:49:03.822 [websvr] ERROR:   addr already in use
+Thu Dec 17 23:49:03.823 [initandlisten] ERROR: listen(): bind() failed errno:98 Address already in use for socket: 0.0.0.0:27017
+Thu Dec 17 23:49:03.823 [initandlisten] ERROR:   addr already in use
+Thu Dec 17 23:49:03.823 [initandlisten] now exiting
+Thu Dec 17 23:49:03.823 dbexit: 
+Thu Dec 17 23:49:03.823 [initandlisten] shutdown: going to close listening sockets...
+Thu Dec 17 23:49:03.823 [initandlisten] shutdown: going to flush diaglog...
+Thu Dec 17 23:49:03.823 [initandlisten] shutdown: going to close sockets...
+Thu Dec 17 23:49:03.823 [initandlisten] shutdown: waiting for fs preallocator...
+Thu Dec 17 23:49:03.823 [initandlisten] shutdown: closing all files...
+Thu Dec 17 23:49:03.825 [initandlisten] closeAllFiles() finished
+Thu Dec 17 23:49:03.825 [initandlisten] shutdown: removing fs lock...
+Thu Dec 17 23:49:03.825 dbexit: really exiting now
