@@ -33,7 +33,9 @@ X_EXPOSE_HEADERS = ['Content-Type', 'Access-Control-Allow-Headers', 'Authorizati
 X_ALLOW_CREDENTIALS = True
 PUBLIC_METHODS = ['GET']
 PUBLIC_ITEM_METHODS = ['GET']
-DATE_FORMAT = '%d/%m/%y %H:%M:%S'  # ("04/21/15 20:56:16")
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'  # ("04/21/15 20:56:16")
+# API_VERSION = 'v1'
+# URL_PREFIX = 'api'
 # JSON = True
 SWAGGER = {
     'info': {

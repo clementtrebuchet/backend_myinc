@@ -74,6 +74,12 @@ def pre_post_peoples(resource, LocalProxy):
     print(LocalProxy.data)
 
 
+def pre_patch_peoples(resource, request, opt):
+    print('General pre_patch_peoples')
+    print(resource)
+    print(dir(request))
+    print(request.get_json())
+    print(opt)
 
 @app.after_request
 def after(response):
@@ -110,4 +116,5 @@ if __name__ == '__main__':
     app.on_post_GET += post_get_callback
     app.on_pre_GET += pre_get_promotion
     app.on_pre_POST += pre_post_peoples
+    app.on_pre_PATCH += pre_patch_peoples
     app.run(debug=True, host='192.168.0.2')
