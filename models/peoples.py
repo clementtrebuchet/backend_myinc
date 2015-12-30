@@ -19,6 +19,7 @@ def peoples():
     :return:  schema
 
     """
+    to_bool = lambda v: v if type(v) is bool else str(v).lower() in ['true', '1', 'false', '0']
     peoples = {
 
         'additional_lookup': {
@@ -36,7 +37,7 @@ def peoples():
         'authentication': BoAuth,
         'allowed_filters': ['*'],
         'item_title': 'people',
-        'item_methods': ['GET','PUT', 'PATCH', 'DELETE'],
+        'item_methods': ['GET', 'PUT', 'PATCH', 'DELETE'],
         'resource_methods': ['POST', 'GET', 'DELETE'],
         'resource_title': 'peoples',
         'projection': False,
@@ -150,6 +151,32 @@ def peoples():
             'born': {
                 'type': 'datetime',
 
+            },
+
+            'about': {
+                'type': 'string',
+                'minlength': 5,
+                'maxlength': 2500,
+
+            },
+
+            'works': {
+                'type': 'list',
+                'schema': {
+                    'type': 'dict',
+                    'schema': {
+                        'company_name': {'type': 'string'},
+                        'title': {'type': 'string'},
+                        'area': {'type': 'string'},
+                        'start': {'type': 'datetime'},
+                        'end': {'type': 'datetime'},
+                        'actual': {'type': 'boolean',
+                                   'coerce': to_bool,
+                                   'default': False},
+                        'description': {'type': 'string'},
+
+                    }
+                }
             }
         }
     }
