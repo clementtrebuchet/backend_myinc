@@ -6,7 +6,7 @@ Eve settings files
 from models.peoples import peoples
 from models.promotion import promotions
 from models.users import users
-from models.works import works
+from models.skills import skills
 
 __author__ = 'clement'
 
@@ -56,7 +56,7 @@ SWAGGER = {
 }
 DOMAIN = {
     'peoples': peoples(),
-    'works': works(),
+    'skills': skills(),
     'promotions': promotions(),
     'users': users()
 }

@@ -4,13 +4,13 @@
 @Todo define use case
 
 """
-from datetime import time
 import json
 
 from eve import Eve
 from flask import request
 from flask.ext.cors import cross_origin
 from flask.ext.sentinel import ResourceOwnerPasswordCredentials, oauth
+import time
 from eve_swagger import swagger
 
 from security.bearer_auth import BoAuth
@@ -99,14 +99,14 @@ def after(response):
 
 @app.route('/ping')
 @cross_origin(origin='*')
-@oauth.require_oauth()
+# @oauth.require_oauth()
 def heart_beat():
     """
 
     :return: call to know if api is online (only for users authenticated)
     """
     return json.dumps({
-        'ts': time(),
+        'ts': '{}'.format(time.time()),
         'alive': 'pong'
     })
 
