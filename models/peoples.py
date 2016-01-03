@@ -182,17 +182,20 @@ def peoples():
             'skills': {
                 'type': 'list',
                 'schema': {
-                    'type': 'objectid',
-                    # referential integrity constraint: value must exist in the
-                    # 'people' collection. Since we aren't declaring a 'field' key,
-                    # will default to `people._id` (or, more precisely, to whatever
-                    # ID_FIELD value is).
-                    'data_relation': {
-                        'resource': 'skills',
-                        # make the owner embeddable with ?embedded={"owner":1}
-                        'embeddable': True,
-                        'field': '_id'
-                    },
+                    'type': 'dict',
+                    'schema': {
+                        'skill_title': {
+                            'type': 'string',
+                            'required': True,
+                        },
+                        'skill_level': {
+                            'type': 'string',
+                            'required': True,
+                        },
+                        'skill_image': {
+                            'type': 'string',
+                        }
+                    }
                 }
             }
 
