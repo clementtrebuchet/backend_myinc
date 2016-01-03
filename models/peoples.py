@@ -194,6 +194,9 @@ def peoples():
                         },
                         'skill_image': {
                             'type': 'string',
+                        },
+                        'skill_tag': {
+                            'type': 'string',
                         }
                     }
                 }
