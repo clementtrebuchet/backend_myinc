@@ -39,7 +39,7 @@ DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'  # ("04/21/15 20:56:16")
 # JSON = True
 SWAGGER = {
     'info': {
-        'title': 'ITCT Open Consulting API',
+        'title': 'DevOps Open Consulting API',
         'version': '1.0',
         'description': 'Presentation API',
         'termsOfService': 'public use',
@@ -48,11 +48,11 @@ SWAGGER = {
             'email': 'clement.trebuchet@gmail.com'
         },
         'license': {
-            'name': 'BSD',
+            'name': 'bsd',
             'url': 'http://dockerapp.clementtrebuchet.cloudns.pw',
         }
     },
-    'host': '192.168.0.2:5000'
+    'host': '127.0.0.1:5000'
 }
 DOMAIN = {
     'peoples': peoples(),

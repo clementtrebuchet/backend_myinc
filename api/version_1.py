@@ -18,7 +18,7 @@ from security.bearer_auth import BoAuth
 
 __author__ = 'clement'
 
-app = Eve(auth=BoAuth)
+app = Eve(auth=BoAuth, settings='settings.py')
 ResourceOwnerPasswordCredentials(app)
 app.register_blueprint(swagger)
 
@@ -90,7 +90,7 @@ def after(response):
     """
     try:
         if request.headers['Origin']:
-            response.headers['Access-Control-Allow-Origin'] = request.headers['Origin']
+            response.headers['Access-Control-Allow-Origin'] = '*'
             response.headers['Access-Control-Allow-Methods'] = "GET,POST,PUT,PATCH,DELETE,OPTIONS",
     except KeyError as error:
         print('{}'.format(error))
@@ -111,10 +111,11 @@ def heart_beat():
     })
 
 
+app.on_fetched_resource += before_returning_peoples
+app.on_post_GET += post_get_callback
+app.on_pre_GET += pre_get_promotion
+app.on_pre_POST += pre_post_peoples
+app.on_pre_PATCH += pre_patch_peoples
+
 if __name__ == '__main__':
-    app.on_fetched_resource += before_returning_peoples
-    app.on_post_GET += post_get_callback
-    app.on_pre_GET += pre_get_promotion
-    app.on_pre_POST += pre_post_peoples
-    app.on_pre_PATCH += pre_patch_peoples
-    app.run(debug=True, host='192.168.0.2')
+    app.run(debug=True, host='127.0.0.1')

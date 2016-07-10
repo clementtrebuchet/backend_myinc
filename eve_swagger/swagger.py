@@ -10,10 +10,10 @@
 from collections import OrderedDict
 from flask import Blueprint, jsonify
 
-from objects import info, host, base_path, schemes, consumes, produces, \
+from eve_swagger.objects import info, host, base_path, schemes, consumes, produces, \
     definitions, parameters, responses, security_definitions, security, \
     tags, external_docs
-from paths import paths
+from eve_swagger.paths import paths
 
 
 swagger = Blueprint('eve_swagger', __name__)
