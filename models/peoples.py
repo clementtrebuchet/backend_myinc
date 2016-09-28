@@ -26,7 +26,7 @@ def peoples():
             'url': 'regex("[\w]+")',
             'field': 'owner'
         },
-        'public_methods': ['GET', 'POST', 'DELETE'],
+        'public_methods': ['GET'],
         'public_item_methods': ['GET', 'POST', 'DELETE'],
         'allowed_roles': ['admin', 'user'],
         'allowed_item_roles': ['admin', 'user'],

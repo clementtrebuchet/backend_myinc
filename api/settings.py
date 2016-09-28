@@ -3,13 +3,15 @@
 Eve settings files
 
 """
+from models.onions import onions
 from models.peoples import peoples
 from models.promotion import promotions
 from models.users import users
 from models.skills import skills
 
 __author__ = 'clement'
-
+SENTINEL_MANAGEMENT_USERNAME='clement'
+SENTINEL_MANAGEMENT_PASSWORD = 'sonyaltec120278@@..'
 SENTINEL_MONGO_HOST = 'localhost'
 SENTINEL_MONGO_PORT = 27017
 # MONGO_USERNAME = 'user'
@@ -34,9 +36,11 @@ X_ALLOW_CREDENTIALS = True
 PUBLIC_METHODS = ['GET']
 PUBLIC_ITEM_METHODS = ['GET']
 DATE_FORMAT = '%Y-%m-%dT%H:%M:%S.%fZ'  # ("04/21/15 20:56:16")
+MONGO_QUERY_BLACKLIST = ['$where']
 # API_VERSION = 'v1'
 # URL_PREFIX = 'api'
-# JSON = True
+JSON = True
+XML =False
 SWAGGER = {
     'info': {
         'title': 'DevOps Open Consulting API',
@@ -44,19 +48,20 @@ SWAGGER = {
         'description': 'Presentation API',
         'termsOfService': 'public use',
         'contact': {
-            'name': 'clement',
+            'name': 'GEEK CONSULTING',
             'email': 'clement.trebuchet@gmail.com'
         },
         'license': {
             'name': 'bsd',
-            'url': 'http://dockerapp.clementtrebuchet.cloudns.pw',
+            'url': 'https://curriculum.trebuchetclement.fr',
         }
     },
-    'host': '127.0.0.1:5000'
+    'host': 'curriculum.trebuchetclement.fr:5055'
 }
 DOMAIN = {
     'peoples': peoples(),
     'skills': skills(),
     'promotions': promotions(),
-    'users': users()
+    'users': users(),
+    'onions': onions()
 }

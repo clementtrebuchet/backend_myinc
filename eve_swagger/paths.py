@@ -47,7 +47,7 @@ def _item(rd, methods, item_id):
     if 'PUT' in methods:
         item['put'] = put_response(rd, item_id)
     if 'PATCH' in methods:
-        item['patch'] = patch_response(rd, item_id)
+        item['__patch'] = patch_response(rd, item_id)
     if 'DELETE' in methods:
         item['delete'] = deleteitem_response(rd, item_id)
     return item
