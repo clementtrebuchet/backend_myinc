@@ -10,8 +10,6 @@ from models.users import users
 from models.skills import skills
 
 __author__ = 'clement'
-SENTINEL_MANAGEMENT_USERNAME='clement'
-SENTINEL_MANAGEMENT_PASSWORD = 'sonyaltec120278@@..'
 SENTINEL_MONGO_HOST = 'localhost'
 SENTINEL_MONGO_PORT = 27017
 # MONGO_USERNAME = 'user'
