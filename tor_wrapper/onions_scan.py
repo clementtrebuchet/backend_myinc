@@ -15,10 +15,11 @@ from stem.control import Controller
 
 onions = []
 session_onions = []
-url = 'https://curriculum.trebuchetclement.fr:5055/onions/'
+url = 'https://curriculum.trebuchetclement.fr:5055/onions'
+PASSWD = "..."
 
 
-def add(ressource):
+def add(ressource, client):
     """
 
     :param ressource: dict
@@ -42,52 +43,58 @@ def add(ressource):
     if scan_result['relatedOnionServices'] is not None:
         add_new_onions(scan_result['relatedOnionServices'])
 
-    if not exist(scan_result['hiddenService']):
-        response = requests.post(url=url, json=scan_result)
-        if response.status_code != 201 or response.status_code != 500:
+    if not exist(scan_result['hiddenService'], client):
+        response = client.post(url=url, json=scan_result)
+        if response.status_code != 201:
             print(response, response.status_code, response.text)
+        else:
+            try:
+                print('CREATE OK %s'% scan_result['hiddenService'])
+            except Exception:
+                print('CREATE OK')
+
     else:
-        __patch(scan_result)
+        __patch(scan_result, client)
 
     return
 
 
-def __patch(ressource):
+def __patch(ressource, client):
     """
 
     :param ressource: dict
         a json dict
     :return:
     """
-    gresponse = requests.get('{}/{}'.format(url, ressource['hiddenService']))
-    if gresponse.status_code != 200 or gresponse.status_code != 500:
+    gresponse = client.get(url='{}/{}'.format(url, ressource['hiddenService']))
+    if gresponse.status_code != 200:
         print(gresponse, gresponse.status_code, gresponse.text)
     else:
         etag = gresponse.json()['_etag']
         _id = gresponse.json()['_id']
         headers = {'If-Match': etag}
-        presponse = requests.patch('{}{}'.format(url, _id), json=ressource, headers=headers)
-        if presponse.status_code != 200 or presponse.status_code != 500:
-            print(presponse, presponse.status_code, presponse.text)
+        presponse = client.patch(url='{}/{}'.format(url, _id), json=ressource, headers=headers)
+        if presponse.status_code == 200:
+            print('PATCHED OK {}'.format(ressource['hiddenService']))
+        else:
+            print('PATCHED KO {} {}'.format(ressource['hiddenService'], presponse.text))
 
 
-def exist(hidden_service):
+def exist(hidden_service, client):
     """
 
     :param hidden_service:
     :return:
     """
-    try :
-        response = requests.get(ur'{}{}'.format(url, hidden_service))
-        if response.status_code != 200 or response.status_code != 500:
+    try:
+        response = client.get(ur'{}/{}'.format(url, hidden_service))
+        if response.status_code != 200:
             print(response.status_code, response.text)
             return False
         return True
     except Exception as e:
         print(e)
         return True
-
-
 
 
 #
@@ -173,7 +180,7 @@ def handle_timeout(process, onion, identity_lock):
     with Controller.from_port(port=9051) as torcontrol:
 
         # authenticate to our local TOR controller
-        torcontrol.authenticate("dedipassclementhashmastercut")
+        torcontrol.authenticate(PASSWD)
 
         # send the signal for a new identity
         torcontrol.signal(Signal.NEWNYM)
@@ -186,7 +193,6 @@ def handle_timeout(process, onion, identity_lock):
     # push the onion back on to the list
     session_onions.append(onion)
     random.shuffle(session_onions)
-
     # allow the main thread to resume executing
     identity_lock.set()
 
@@ -258,7 +264,20 @@ def main(mongo=True):
 
     # randomize the list a bit
     random.shuffle(onions)
+
     session_onions = list(onions)
+    http_session = requests.session()
+    http_session.headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    resp = http_session.post(
+        url='https://curriculum.trebuchetclement.fr:5055/oauth/token?client_id=YM5Qe9Ho6YfecEKQaMXZtbw9edPS6KhT0iKZ6FUf&grant_type=password&username={}&password={}'.format(
+            'messagebot', 'messagebot'))
+    access_token = resp.json()['access_token']
+    print('Get access token', access_token)
+    http_session.headers = {
+        'Authorization': 'Bearer {}'.format(access_token)
+    }
     count = 0
     while count < len(onions):
         # if the event is cleared we will halt here
@@ -267,12 +286,23 @@ def main(mongo=True):
 
         # grab a new onion to scan
         print ("[*] Running %d of %d." % (count, len(onions)))
-        onion = session_onions.pop()
-        # test to see if we have already retrieved results for this onion
-        if os.path.exists("onionscan_results/%s.json" % onion):
-            print("[!] Already retrieved %s. Skipping." % onion)
-            count += 1
+
+        try:
+            onion = session_onions.pop()
+        except IndexError as e:
+            print('Error cannot retrieve onions in list {}'.format(e))
+            del onions
+            onions = get_onion_list()
+            del count
+            count = 0
             continue
+
+        # test to see if we have already retrieved results for this onion
+        if not mongo:
+            if os.path.exists("onionscan_results/%s.json" % onion):
+                print("[!] Already retrieved %s. Skipping." % onion)
+                count += 1
+                continue
 
         # run the onion scan
         result = run_onionscan(onion, identity_lock)
@@ -284,7 +314,7 @@ def main(mongo=True):
                 count += 1
         elif result is not None and mongo:
             if len(result):
-                add(result)
+                add(result, http_session)
                 count += 1
 
 
