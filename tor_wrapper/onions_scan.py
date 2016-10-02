@@ -17,9 +17,10 @@ onions = []
 session_onions = []
 url = 'https://curriculum.trebuchetclement.fr:5055/onions'
 PASSWD = ""
+http_client = None
 
 
-def add(ressource, client):
+def add(ressource):
     """
 
     :param ressource: dict
@@ -29,6 +30,7 @@ def add(ressource, client):
     """
     global onions
     global session_onions
+    global http_client
 
     # look for additional .onion domains to add to our scan list
     scan_result = ur"%s" % ressource.decode("utf8")
@@ -43,51 +45,78 @@ def add(ressource, client):
     if scan_result['relatedOnionServices'] is not None:
         add_new_onions(scan_result['relatedOnionServices'])
 
-    if not exist(scan_result['hiddenService'], client):
-        response = client.post(url=url, json=scan_result)
-        if response.status_code != 201:
+    if not exist(scan_result['hiddenService']):
+        response = http_client.post(url=url, json=scan_result)
+        if response.status_code != 201 and response.status_code != 401:
             print(response, response.status_code, response.text)
+        elif response.status_code == 401:
+            http_client = get_client()
+            response = http_client.post(url=url, json=scan_result)
+            if response.status_code != 201 and response.status_code != 401:
+                print(response, response.status_code, response.text)
+            else:
+                try:
+                    print('CREATE OK %s' % scan_result['hiddenService'])
+                except Exception:
+                    print('CREATE OK')
         else:
             try:
-                print('CREATE OK %s'% scan_result['hiddenService'])
+                print('CREATE OK %s' % scan_result['hiddenService'])
             except Exception:
                 print('CREATE OK')
 
     else:
-        __patch(scan_result, client)
+        __patch(scan_result)
 
     return
 
 
-def __patch(ressource, client):
+def __patch(ressource):
     """
 
     :param ressource: dict
         a json dict
     :return:
     """
-    gresponse = client.get(url='{}/{}'.format(url, ressource['hiddenService']))
+    global http_client
+
+    gresponse = http_client.get(url='{}/{}'.format(url, ressource['hiddenService']))
     if gresponse.status_code != 200:
         print(gresponse, gresponse.status_code, gresponse.text)
     else:
-        etag = gresponse.json()['_etag']
-        _id = gresponse.json()['_id']
-        headers = {'If-Match': etag}
-        presponse = client.patch(url='{}/{}'.format(url, _id), json=ressource, headers=headers)
+        presponse = patch_it(http_client, gresponse, ressource)
         if presponse.status_code == 200:
             print('PATCHED OK {}'.format(ressource['hiddenService']))
+        elif presponse.status_code == 401:
+            http_client = get_client()
+            presponse = patch_it(http_client, gresponse, ressource)
+            if presponse.status_code == 200:
+                print('PATCHED OK {}'.format(ressource['hiddenService']))
+            else:
+                print('PATCHED KO {} {}'.format(ressource['hiddenService'], presponse.text))
+
         else:
             print('PATCHED KO {} {}'.format(ressource['hiddenService'], presponse.text))
 
 
-def exist(hidden_service, client):
+def patch_it(client, gresponse, ressource):
+    etag = gresponse.json()['_etag']
+    _id = gresponse.json()['_id']
+    headers = {'If-Match': etag}
+    presponse = client.patch(url='{}/{}'.format(url, _id), json=ressource, headers=headers)
+    return presponse
+
+
+def exist(hidden_service):
     """
 
     :param hidden_service:
     :return:
     """
+    global http_client
+
     try:
-        response = client.get(ur'{}/{}'.format(url, hidden_service))
+        response = http_client.get(ur'{}/{}'.format(url, hidden_service))
         if response.status_code != 200:
             print(response.status_code, response.text)
             return False
@@ -256,6 +285,8 @@ def main(mongo=True):
     :return:
 
     """
+    global http_client
+
     identity_lock = Event()
     identity_lock.set()
 
@@ -266,18 +297,7 @@ def main(mongo=True):
     random.shuffle(onions)
 
     session_onions = list(onions)
-    http_session = requests.session()
-    http_session.headers = {
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    resp = http_session.post(
-        url='https://curriculum.trebuchetclement.fr:5055/oauth/token?client_id=YM5Qe9Ho6YfecEKQaMXZtbw9edPS6KhT0iKZ6FUf&grant_type=password&username={}&password={}'.format(
-            'messagebot', 'messagebot'))
-    access_token = resp.json()['access_token']
-    print('Get access token', access_token)
-    http_session.headers = {
-        'Authorization': 'Bearer {}'.format(access_token)
-    }
+    http_client = get_client()
     count = 0
     while count < len(onions):
         # if the event is cleared we will halt here
@@ -314,8 +334,24 @@ def main(mongo=True):
                 count += 1
         elif result is not None and mongo:
             if len(result):
-                add(result, http_session)
+                add(result)
                 count += 1
+
+
+def get_client():
+    http_session = requests.session()
+    http_session.headers = {
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    resp = http_session.post(
+        url='https://curriculum.trebuchetclement.fr:5055/oauth/token?client_id=YM5Qe9Ho6YfecEKQaMXZtbw9edPS6KhT0iKZ6FUf&grant_type=password&username={}&password={}'.format(
+            '', ''))
+    access_token = resp.json()['access_token']
+    print('Get access token', access_token)
+    http_session.headers = {
+        'Authorization': 'Bearer {}'.format(access_token)
+    }
+    return http_session
 
 
 if __name__ == '__main__':
