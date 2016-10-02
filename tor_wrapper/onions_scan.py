@@ -16,7 +16,7 @@ from stem.control import Controller
 onions = []
 session_onions = []
 url = 'https://curriculum.trebuchetclement.fr:5055/onions'
-PASSWD = "..."
+PASSWD = ""
 
 
 def add(ressource, client):
