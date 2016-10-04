@@ -7,7 +7,7 @@ __author__ = 'clement.trebuchet'
 # coding: utf8
 """
 12/17/15 10:33 PM
-model definition for peoples skills document
+model definition for onions scanned documents
 
 """
 from security.bearer_auth import BoAuth
