@@ -508,9 +508,6 @@ def handler(signum, frame):
     :return:
 
     """
-    from tor_wrapper import onions_relay
-    print('Signal handler called with signal', signum)
-    onions_relay.STOP = True
     try:
         for p in process_holder:
             p.terminate()
