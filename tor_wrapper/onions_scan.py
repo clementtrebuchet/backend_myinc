@@ -525,7 +525,7 @@ def get_client():
     }
     resp = http_session.post(
         url='https://curriculum.trebuchetclement.fr:5055/oauth/token?client_id=YM5Qe9Ho6YfecEKQaMXZtbw9edPS6KhT0iKZ6FUf&grant_type=password&username={}&password={}'.format(
-            'messagebot', 'messagebot'))
+            'alfred', 'alfred'))
     access_token = resp.json()['access_token']
     print('Get access token', access_token)
     http_session.headers = {
