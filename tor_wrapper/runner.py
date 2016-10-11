@@ -168,9 +168,6 @@ class AutomateManager(object):
 
 def worker_stopped_handler(signum, frame):
     print('[**] stop worker {}'.format(frame))
-    for wl in workers:
-        for p in wl:
-            p.terminate()
 
 
 def worker(**data):
