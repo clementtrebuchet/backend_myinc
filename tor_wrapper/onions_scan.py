@@ -1,6 +1,9 @@
 # coding: utf8
+import functools
 import json
+import multiprocessing
 import random
+import signal
 import subprocess
 import sys
 import time
@@ -10,27 +13,101 @@ from threading import Timer
 import codecs
 import os
 import requests
-from stem import Signal
-from stem.control import Controller
+from stem import Signal, StreamStatus
+from stem.control import Controller, EventType
+
+from tor_wrapper.onions_exit import is_onions, onion_model, say_it, patch_exit, exist_exit
 
 onions = []
 session_onions = []
 url = 'https://curriculum.trebuchetclement.fr:5055/onions'
-PASSWD = ""
-http_client = None
+PASSWD = "***************"
 
 
-def add(ressource):
+def run_exit_scan(http_client):
     """
 
-    :param ressource: dict
-        a json dict
-
+    :param http_client:
+    :type: requests.client
     :return:
+    """
+    print("Tracking requests for tor exits. Press 'enter' to end.")
+    with Controller.from_port() as controller:
+        try:
+            DO = True
+            controller.authenticate(PASSWD)
+            stream_listener = functools.partial(stream_event, controller, http_client=http_client)
+            controller.add_event_listener(stream_listener, EventType.STREAM)
+            while DO:
+                time.sleep(500)
+                print('[exit] Alive')
+        except KeyboardInterrupt:
+            print('[!!]Keyboard interrupt')
+        except Exception as e:
+            print(e)
+            print('[**]Exception {}'.format(e))
+
+
+def stream_event(controller, event, http_client=None):
+    """CallBack for event listener
+
+    :param controller:
+    :param event:
+    """
+    if event.status == StreamStatus.SUCCEEDED and event.circ_id:
+        try:
+            circ = controller.get_circuit(event.circ_id)
+            exit_fingerprint = circ.path[-1][0]
+            exit_relay = controller.get_network_status(exit_fingerprint)
+            onni = is_onions(event.target.split(':')[0])
+            if onni:
+                print('[***] Exit relay {}'.format(event.target))
+                model_exist, model_response = exist_exit(event.target.split(':')[0], http_client)
+                if not model_exist:
+                    scan_result = onion_model(controller, event, exit_relay)
+                    response = http_client.post(url=url, json=scan_result)
+                    if response.status_code != 201 and response.status_code != 401:
+                        print(response, response.status_code, response.text)
+                    elif response.status_code == 401:
+                        http_client = get_client()
+                        response = http_client.post(url=url, json=scan_result)
+                        if response.status_code != 201 and response.status_code != 401:
+                            print(response, response.status_code, response.text)
+                        else:
+                            try:
+                                say_it(controller, event, exit_relay, scan_result)
+                            except Exception as e:
+                                print(e)
+                                say_it(controller, event, exit_relay, scan_result, err=True)
+                    else:
+                        try:
+                            say_it(controller, event, exit_relay, scan_result)
+                        except Exception as e:
+                            print(e)
+                            say_it(controller, event, exit_relay, scan_result, err=True)
+                elif model_exist and is_onions(event.target.split(':')[0]):
+                    scan_result = onion_model(controller, event, exit_relay)
+                    patch_exit(http_client, model_response, json.dumps(scan_result))
+                else:
+                    pass
+
+        except Exception as e:
+            print(e)
+
+
+def add(ressource, http_client):
+    """Add a result form onion_scan go routine
+
+    :param http_client:
+    :type requests.client
+
+    :param ressource:
+    :type dict
+
+
     """
     global onions
     global session_onions
-    global http_client
 
     # look for additional .onion domains to add to our scan list
     scan_result = ur"%s" % ressource.decode("utf8")
@@ -44,8 +121,10 @@ def add(ressource):
 
     if scan_result['relatedOnionServices'] is not None:
         add_new_onions(scan_result['relatedOnionServices'])
-
-    if not exist(scan_result['hiddenService']):
+    if not scan_result['webDetected']:
+        print("[**!!]Not a webSite")
+        return
+    elif not exist(scan_result['hiddenService'], http_client):
         response = http_client.post(url=url, json=scan_result)
         if response.status_code != 201 and response.status_code != 401:
             print(response, response.status_code, response.text)
@@ -66,19 +145,18 @@ def add(ressource):
                 print('CREATE OK')
 
     else:
-        __patch(scan_result)
+        __patch(scan_result, http_client)
 
     return
 
 
-def __patch(ressource):
+def __patch(ressource, http_client):
     """
 
     :param ressource: dict
         a json dict
     :return:
     """
-    global http_client
 
     gresponse = http_client.get(url='{}/{}'.format(url, ressource['hiddenService']))
     if gresponse.status_code != 200:
@@ -100,6 +178,14 @@ def __patch(ressource):
 
 
 def patch_it(client, gresponse, ressource):
+    """
+
+    :param client:
+    :param gresponse:
+    :param ressource:
+    :return:
+
+    """
     etag = gresponse.json()['_etag']
     _id = gresponse.json()['_id']
     headers = {'If-Match': etag}
@@ -107,14 +193,15 @@ def patch_it(client, gresponse, ressource):
     return presponse
 
 
-def exist(hidden_service):
-    """
+def exist(hidden_service, http_client):
+    """check if an onions is already in the DataStore
 
     :param hidden_service:
-    :return:
-    """
-    global http_client
+    ;type: str
 
+    :return: boolean
+
+    """
     try:
         response = http_client.get(ur'{}/{}'.format(url, hidden_service))
         if response.status_code != 200:
@@ -129,19 +216,32 @@ def exist(hidden_service):
 #
 # Grab the list of onions from our master list file.
 #
-def get_onion_list():
-    # open the master list
-    if os.path.exists("onion_master_list.txt"):
+def get_onion_list(url_list=None):
+    """
 
-        with open("onion_master_list.txt", "rb") as fd:
+    :param url_list:
+    :type: list
 
-            stored_onions = fd.read().splitlines()
+
+    :return: list
+
+    """
+    if url_list is None:
+        # open the master list
+        if os.path.exists("onion_master_list.txt"):
+
+            with open("onion_master_list.txt", "rb") as fd:
+
+                stored_onions = fd.read().splitlines()
+        else:
+            print("[!] No onion master list. Download it!")
+            sys.exit(0)
+
     else:
-        print("[!] No onion master list. Download it!")
-        sys.exit(0)
+        stored_onions = []
+        stored_onions.extend(url_list)
 
     print("[*] Total onions for scanning: %d" % len(stored_onions))
-
     return stored_onions
 
 
@@ -149,6 +249,15 @@ def get_onion_list():
 # Stores an onion in the master list of onions.
 #
 def store_onion(onion):
+    """Store an onion in the master file onions process list
+
+    :param onion:
+    :type: str
+
+
+    :return:
+
+    """
     print("[++] Storing %s in master list." % onion)
 
     with codecs.open("onion_master_list.txt", "ab", encoding="utf8") as fd:
@@ -161,12 +270,17 @@ def store_onion(onion):
 # Runs onion scan as a child process.
 #
 def run_onionscan(onion, identity_lock):
-    """
+    """Wrapper around  the go onionscan bin
 
     :param onion:
+    :type: str
+
     :param identity_lock:
-    :return:
+    :type: stem.Event
+
+
     """
+
     print("[*] Onionscanning %s" % onion)
 
     # fire up onionscan
@@ -178,8 +292,13 @@ def run_onionscan(onion, identity_lock):
     process_timer = Timer(300, handle_timeout, args=[process, onion, identity_lock])
     process_timer.start()
 
-    # wait for the onion scan results
-    stdout = process.communicate()[0]
+    try:
+        # wait for the onion scan results
+        stdout = process.communicate()[0]
+    except KeyboardInterrupt:
+        process_timer.cancel()
+        process.kill()
+        exit(0)
 
     # we have received valid results so we can kill the timer
     if process_timer.is_alive():
@@ -195,7 +314,15 @@ def run_onionscan(onion, identity_lock):
 # Handle a timeout from the onionscan process.
 #
 def handle_timeout(process, onion, identity_lock):
-    # halt the main thread while we grab a new identity
+    """
+
+    :param process:
+    :param onion:
+    :param identity_lock:
+
+    :return:
+    """
+    # halt the run_exit_scan thread while we grab a new identity
     identity_lock.clear()
 
     # kill the onionscan process
@@ -222,7 +349,7 @@ def handle_timeout(process, onion, identity_lock):
     # push the onion back on to the list
     session_onions.append(onion)
     random.shuffle(session_onions)
-    # allow the main thread to resume executing
+    # allow the run_exit_scan thread to resume executing
     identity_lock.set()
 
     return
@@ -232,6 +359,13 @@ def handle_timeout(process, onion, identity_lock):
 # Processes the JSON result from onionscan.
 #
 def process_results(onion, json_response):
+    """
+
+    :param onion:
+    :param json_response:
+    :return:
+
+    """
     global onions
     global session_onions
 
@@ -263,6 +397,13 @@ def process_results(onion, json_response):
 # Handle new onions.
 #
 def add_new_onions(new_onion_list):
+    """
+
+    :param new_onion_list:
+
+    :return:
+
+    """
     global onions
     global session_onions
 
@@ -279,43 +420,64 @@ def add_new_onions(new_onion_list):
     return
 
 
-def main(mongo=True):
+process_holder = []
+
+
+def scan(mongo=True, url_list=None):
     """
 
+    :param mongo:
+    :param url_list:
     :return:
 
     """
-    global http_client
-
+    global process_holder
     identity_lock = Event()
     identity_lock.set()
 
     # get a list of onions to process
-    onions = get_onion_list()
+    onions = get_onion_list(url_list=url_list)
 
     # randomize the list a bit
     random.shuffle(onions)
 
     session_onions = list(onions)
     http_client = get_client()
+    http_client_exit = get_client()
     count = 0
-    while count < len(onions):
+    while True:
         # if the event is cleared we will halt here
         # otherwise we continue executing
         identity_lock.wait()
-
         # grab a new onion to scan
-        print ("[*] Running %d of %d." % (count, len(onions)))
+        print("[*] Running %d of %d." % (count, len(onions)))
+        process_holder.append(multiprocessing.Process(target=run_exit_scan, name='exit_scan', args=[http_client_exit]))
+        for p in process_holder:
+            p.start()
+            p.join(timeout=1)
+
+        print("[*] Detach Exit Tor Relay scan")
 
         try:
             onion = session_onions.pop()
         except IndexError as e:
-            print('Error cannot retrieve onions in list {}'.format(e))
-            del onions
-            onions = get_onion_list()
-            del count
-            count = 0
-            continue
+            if url_list is not None:
+                print('[!!!] this is a one shot url list {}'.format(url_list))
+                signal.signal(signal.SIGALRM, handler)
+                break
+            try:
+                print('Error cannot retrieve onions in list {}'.format(e))
+                onions = get_onion_list(url_list=url_list)
+                print('get onions - list length {}'.format(len(onions)))
+                session_onions = list(onions)
+                print('get session_onions - list length {}'.format(len(session_onions)))
+                count = 0
+                print('reset counter {}'.format(count))
+                continue
+            except Exception as e:
+                print('[!!!] cannot reload onions list {}'.format(e))
+                signal.signal(signal.SIGALRM, handler)
+                break
 
         # test to see if we have already retrieved results for this onion
         if not mongo:
@@ -325,7 +487,7 @@ def main(mongo=True):
                 continue
 
         # run the onion scan
-        result = run_onionscan(onion, identity_lock)
+        result = run_onionscan(onion, identity_lock, )
 
         # process the results
         if result is not None and not mongo:
@@ -334,18 +496,41 @@ def main(mongo=True):
                 count += 1
         elif result is not None and mongo:
             if len(result):
-                add(result)
+                add(result, http_client)
                 count += 1
 
 
+def handler(signum, frame):
+    """
+
+    :param signum:
+    :param frame:
+    :return:
+
+    """
+    from tor_wrapper import onions_relay
+    print('Signal handler called with signal', signum)
+    onions_relay.STOP = True
+    try:
+        for p in process_holder:
+            p.terminate()
+    except Exception:
+        pass
+
+
 def get_client():
+    """
+
+    :return:
+    """
+
     http_session = requests.session()
     http_session.headers = {
         'Content-Type': 'application/x-www-form-urlencoded'
     }
     resp = http_session.post(
         url='https://curriculum.trebuchetclement.fr:5055/oauth/token?client_id=YM5Qe9Ho6YfecEKQaMXZtbw9edPS6KhT0iKZ6FUf&grant_type=password&username={}&password={}'.format(
-            '', ''))
+            'messagebot', 'messagebot'))
     access_token = resp.json()['access_token']
     print('Get access token', access_token)
     http_session.headers = {
@@ -355,4 +540,4 @@ def get_client():
 
 
 if __name__ == '__main__':
-    main()
+    scan()
