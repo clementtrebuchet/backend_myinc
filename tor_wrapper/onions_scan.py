@@ -1,11 +1,11 @@
 # coding: utf8
 import functools
 import json
-import multiprocessing
 import random
 import signal
 import subprocess
 import sys
+import threading
 import time
 from threading import Event
 from threading import Timer
@@ -21,10 +21,10 @@ from tor_wrapper.onions_exit import is_onions, onion_model, say_it, patch_exit, 
 onions = []
 session_onions = []
 url = 'https://curriculum.trebuchetclement.fr:5055/onions'
-PASSWD = "***************"
+PASSWD = "***************************"
 
 
-def run_exit_scan(http_client):
+def run_exit_scan(http_client, stop_event):
     """
 
     :param http_client:
@@ -34,13 +34,13 @@ def run_exit_scan(http_client):
     print("Tracking requests for tor exits. Press 'enter' to end.")
     with Controller.from_port() as controller:
         try:
-            DO = True
             controller.authenticate(PASSWD)
             stream_listener = functools.partial(stream_event, controller, http_client=http_client)
             controller.add_event_listener(stream_listener, EventType.STREAM)
-            while DO:
-                time.sleep(500)
-                print('[exit] Alive')
+            while not stop_event.is_set():
+                stop_event.wait(2000)
+                continue
+
         except KeyboardInterrupt:
             print('[!!]Keyboard interrupt')
         except Exception as e:
@@ -451,13 +451,10 @@ def scan(mongo=True, url_list=None):
         identity_lock.wait()
         # grab a new onion to scan
         print("[*] Running %d of %d." % (count, len(onions)))
-        process_holder.append(multiprocessing.Process(target=run_exit_scan, name='exit_scan', args=[http_client_exit]))
-        for p in process_holder:
-            p.start()
-            p.join(timeout=1)
-
+        stop_event = threading.Event()
+        t = threading.Thread(target=run_exit_scan, args=(http_client_exit, stop_event))
+        t.start()
         print("[*] Detach Exit Tor Relay scan")
-
         try:
             onion = session_onions.pop()
         except IndexError as e:
@@ -498,6 +495,7 @@ def scan(mongo=True, url_list=None):
             if len(result):
                 add(result, http_client)
                 count += 1
+        stop_event.set()
 
 
 def handler(signum, frame):
